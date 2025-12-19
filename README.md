@@ -1,5 +1,6 @@
 # Marximus-Finance
-A modular, metadata-driven CRM-style web application
+A modular, metadata-driven CRM-style web application built for Finance.
+Major credit design to [SuiteCRM](https://docs.suitecrm.com/developer/database-schema/)
 
 ## Overview
 This is a personal finance web application built using Python, Flask, SQLAlchemy, psycopg3, and PostgreSQL. The application follows a modular architecture with metadata-driven entity definitions.
