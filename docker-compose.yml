@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16
+    container_name: marximus_postgres
+    environment:
+      POSTGRES_DB: marximus_crm
+      POSTGRES_USER: marximus
+      POSTGRES_PASSWORD: marximus_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - marximus_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marximus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: marximus_web
+    environment:
+      DATABASE_URL: postgresql+psycopg://marximus:marximus_password@db:5432/marximus_crm
+      FLASK_ENV: development
+      FLASK_DEBUG: 1
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - marximus_network
+    command: flask run --host=0.0.0.0
+
+volumes:
+  postgres_data:
+
+networks:
+  marximus_network:
+    driver: bridge
