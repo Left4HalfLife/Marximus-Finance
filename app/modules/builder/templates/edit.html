@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Edit' if record_id else 'New record' }} · {{ module.name }}{% endblock %}
+{% block content %}
+<p class="eyebrow"><a href="{{ url_for('.listing', module_id=module.id) }}">{{ module.name }}</a></p>
+<h1>{{ 'Edit ' ~ module.number(record_id) if record_id else 'New record' }}</h1>
+<section><form method="post">
+  <input type="hidden" name="_csrf" value="{{ csrf }}">
+  {% for f in visible %}
+    {% set k = key(f) %}{% set selected = values.get(k, []) %}
+    {% if f.kind == 'radio' %}
+      <fieldset><legend>{{ f.label }}</legend>
+        <label><input type="radio" name="{{ k }}" value=""{% if not selected %} checked{% endif %}> None</label>
+        {% for value, name in options(f) %}<label><input type="radio" name="{{ k }}" value="{{ value }}"{% if value in selected %} checked{% endif %}> {{ name }}</label>{% endfor %}
+      </fieldset>
+    {% else %}
+      <label>{{ f.label }}
+        {% if f.kind in ['text', 'date'] %}
+          <input type="{{ f.kind }}" name="{{ k }}" value="{{ selected|first|default('') }}">
+        {% else %}
+          {% set many = f.kind in ['multi', 'related_many'] %}
+          <select name="{{ k }}"{% if many %} multiple{% endif %}>
+            {% if not many %}<option value="">None</option>{% endif %}
+            {% for value, name in options(f) %}<option value="{{ value }}"{% if value in selected %} selected{% endif %}>{{ name }}</option>{% endfor %}
+          </select>
+        {% endif %}
+      </label>
+    {% endif %}
+  {% endfor %}
+  <button>Save record</button>
+  <a href="{{ url_for('.detail', module_id=module.id, record_id=record_id) if record_id else url_for('.listing', module_id=module.id) }}">Cancel</a>
+</form></section>
+{% endblock %}

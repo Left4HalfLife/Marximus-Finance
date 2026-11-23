@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Design {{ module.name }}{% endblock %}
+{% block content %}
+<p class="eyebrow"><a href="{{ url_for('.settings') }}">Settings</a> / Module builder</p>
+<div class="heading"><h1>{{ module.name }}</h1><a href="{{ url_for('.listing', module_id=module.id) }}">View records &rarr;</a></div>
+<p>Record number pattern: <code>{{ module.pattern }}</code></p>
+<section>
+  <h2>Add a field</h2>
+  <form method="post">
+    <input type="hidden" name="_csrf" value="{{ csrf }}"><input type="hidden" name="action" value="field">
+    <label>Field label <input required maxlength="100" name="label" placeholder="Description" value="{{ request.form.get('label', '') }}"></label>
+    <label>Field type <select name="kind">{% for value, description in types.items() %}<option value="{{ value }}"{% if request.form.get('kind') == value %} selected{% endif %}>{{ description }}</option>{% endfor %}</select></label>
+    <label>Choices (radio or dropdown fields only)
+      <textarea name="choices" rows="3" placeholder="One option per line">{{ request.form.get('choices', '') }}</textarea>
+    </label>
+    <label>Target module (related fields only)
+      <select name="target"><option value="">Choose a module</option>{% for target in nav %}<option value="{{ target.id }}"{% if request.form.get('target') == target.id|string %} selected{% endif %}>{{ target.name }}</option>{% endfor %}</select>
+    </label>
+    <button>Add field</button>
+  </form>
+</section>
+<section>
+  <h2>View editor</h2>
+  {% if module.fields %}
+    <p class="hint">Enter a position in each view, or leave it blank to hide the field. Search matches any searchable field; filters match individual values.</p>
+    <form method="post">
+      <input type="hidden" name="_csrf" value="{{ csrf }}"><input type="hidden" name="action" value="layout">
+      <div class="scroll"><table>
+        <thead><tr><th>Field</th><th>Type</th>{% for view in views %}<th>{{ view|title }} order</th>{% endfor %}<th>Searchable</th><th>Filterable</th></tr></thead>
+        <tbody>{% for f in module.fields %}<tr>
+          <th scope="row">{{ f.label }}</th><td>{{ types[f.kind] }}</td>
+          {% for view in views %}
+            <td><input aria-label="{{ f.label }}: {{ view }} order" type="number" min="1" max="999999" name="{{ view }}_{{ f.id }}" value="{{ f[view] or '' }}"></td>
+          {% endfor %}
+          {% for flag in ['searchable', 'filterable'] %}
+            <td><input aria-label="{{ f.label }}: {{ flag }}" type="checkbox" name="{{ flag }}_{{ f.id }}"{% if f[flag] %} checked{% endif %}></td>
+          {% endfor %}
+        </tr>{% endfor %}</tbody>
+      </table></div>
+      <button>Save views</button>
+    </form>
+  {% else %}<p>Add a field to start designing the list, detail and edit views.</p>{% endif %}
+</section>
+{% endblock %}

@@ -3,81 +3,59 @@ A modular, metadata-driven CRM-style web application built for Finance.
 Major credit design to [SuiteCRM](https://docs.suitecrm.com/developer/database-schema/)
 
 ## Overview
-This is a personal finance web application built using Python, Flask, SQLAlchemy, psycopg3, and PostgreSQL. The application follows a modular architecture with metadata-driven entity definitions.
+Define modules, fields, relationships and views in **Settings → Module builder**.
+The app starts empty and is intended for one user on a trusted local machine.
+There is no sign-in or permission system.
 
-## Project Structure
+## Run locally
 
-```
-/app
-  /core              - Core engine components
-    metadata_engine.py  - Handles metadata-driven CRM entity definitions
-    module_loader.py    - Dynamically loads CRM modules
-    schema_sync.py      - Synchronizes database schema with metadata
-    crud_engine.py      - Provides generic CRUD operations
-  /modules           - Custom CRM modules (empty, ready for extensions)
-  /api               - API layer
-    routes.py          - Flask API routes
-  /db                - Database layer
-    base.py            - SQLAlchemy base configuration
-    session.py         - Database session management
-  /utils             - Utility functions (empty, ready for helpers)
-/config              - Configuration files
-/tests               - Test suite
-```
+With Python 3.11+:
 
-## Technologies
-
-- **Python 3.11** - Core programming language
-- **Flask 3.0** - Web framework
-- **SQLAlchemy 2.0** - ORM
-- **psycopg3** - PostgreSQL adapter
-- **PostgreSQL 16** - Database
-- **Docker & Docker Compose** - Containerization
-
-## Getting Started
-
-### Prerequisites
-- Docker
-- Docker Compose
-
-### Running the Application
-
-1. Build and start the containers:
 ```bash
-docker-compose up --build
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+flask --app app.modules.builder run
 ```
 
-2. The application will be available at:
-   - Web App: http://localhost:5000
-   - PostgreSQL: localhost:5432
+Open **http://localhost:5000/settings**. Without `DATABASE_URL`, the app stores
+data in `instance/finance.sqlite3`. To use the supplied PostgreSQL 16 setup
+instead, run `docker compose up --build` and open the same URL. PostgreSQL data
+persists in the Compose volume. The sample `.env.example` database URL is for
+use **inside** the Compose network, not for the local SQLite setup. Compose
+publishes ports 5000 and 5432; do not expose this unauthenticated development
+setup to an untrusted network.
 
-### Database Connection
+## Example: tag and find transactions
 
-The application connects to PostgreSQL with the following credentials:
-- Database: `marximus_crm`
-- User: `marximus`
-- Password: `marximus_password`
-- Host: `db` (within Docker network: `marximus_network`)
-
-### Development
-
-The application is configured for development mode with:
-- Hot-reload enabled
-- Debug mode on
-- Volume mounting for live code updates
+1. In Settings create **Tags**, pattern `TAG_{n}`, and add a free-text **Name**
+   field. Open Tags from the navbar and create records named `Rent` and `Mortgage`.
+2. Create **Transactions**, pattern `TRN_{n}`. Add a **Date** field and a
+   **Tags** field of type **Related records (multi-select)** targeting Tags.
+   Use **Related record** instead for a single selection; use a fixed dropdown,
+   multi-select or radio field for choices that are not records.
+3. In the **View editor**, set positions for list columns, detail fields and
+   edit inputs. Blank positions hide fields without deleting their values.
+   Enable **Searchable** and **Filterable** for Tags, then save the views.
+4. Open Transactions, create a record, and select Rent. Search `rent` in the
+   list or filter by the Rent record. Click the transaction number to view or
+   edit it. Number sorting uses the integer ID, so `TRN_2` precedes `TRN_10`.
 
 ## Architecture
 
-This application uses a metadata-driven architecture where:
-1. Entities are defined through metadata
-2. Database schema is synchronized automatically
-3. CRUD operations are generated dynamically
-4. Modules can be loaded and extended at runtime
+The runnable Flask package is `app/modules/builder`. `catalog.py` stores module
+and field definitions (including view positions) in SQLAlchemy tables.
+Creating a module creates a record table; adding a scalar field adds a nullable
+column, preserving existing records. Multi-selects and relationships use
+per-field link tables, with foreign keys for related records. Metadata and
+schema changes are committed together. Database identifiers are derived from
+integer IDs, never from user-supplied labels.
 
-## Next Steps
+`records.py` uses those definitions for validation, writes, search and filters.
+Relationships store IDs and display the target's first free-text field plus
+its record number, so renaming a tag updates its display and search results
+without changing any links. `web.py` serves the Settings and record screens.
+The builder is additive: it does not drop modules or change existing field types.
 
-- Implement metadata engine for entity definitions
-- Create schema synchronization logic
-- Build CRUD engine for dynamic operations
-- Add custom modules for specific CRM features
-- Develop API routes for frontend integration
+Run the integration tests with `python -m unittest discover -v`. They use
+temporary SQLite databases, not the configured finance database.

@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}{{ module.name }}{% endblock %}
+{% block content %}
+<p class="eyebrow">Records</p>
+<div class="heading"><h1>{{ module.name }}</h1><a class="button" href="{{ url_for('.edit', module_id=module.id) }}">New record</a></div>
+<section>
+  <form method="get" class="filters">
+    <label>Search <input name="q" type="search" value="{{ request.args.get('q', '') }}" placeholder="Number or searchable field"></label>
+    {% for f in module.fields if f.filterable %}
+      {% set k = key(f) %}
+      <label>{{ f.label }}
+        {% if f.kind in ['text', 'date'] %}
+          <input type="{{ 'date' if f.kind == 'date' else 'text' }}" name="{{ k }}" value="{{ request.args.get(k, '') }}">
+        {% else %}
+          <select name="{{ k }}"><option value="">All</option>{% for value, name in options(f) %}<option value="{{ value }}"{% if request.args.get(k) == value %} selected{% endif %}>{{ name }}</option>{% endfor %}</select>
+        {% endif %}
+      </label>
+    {% endfor %}
+    <label>Number order
+      <select name="sort">
+        <option value="asc">Ascending</option>
+        <option value="desc"{% if request.args.get('sort') == 'desc' %} selected{% endif %}>Descending</option>
+      </select>
+    </label>
+    <button>Apply</button><a href="{{ url_for('.listing', module_id=module.id) }}">Clear</a>
+  </form>
+</section>
+<div class="scroll"><table>
+  <thead><tr><th>Record number</th>{% for f in columns %}<th>{{ f.label }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for row in rows %}<tr>
+    <td><a href="{{ url_for('.detail', module_id=module.id, record_id=row.id) }}">{{ module.number(row.id) }}</a></td>
+    {% for f in columns %}<td>{{ values[row.id].get(key(f), [])|join(', ') }}</td>{% endfor %}
+  </tr>{% else %}<tr><td colspan="{{ columns|length + 1 }}">No matching records.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}
