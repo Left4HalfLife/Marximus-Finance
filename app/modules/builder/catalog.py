@@ -1,6 +1,7 @@
 """Metadata and additive DDL for the module builder (SQLite and PostgreSQL)."""
 
 from dataclasses import dataclass
+from decimal import Decimal
 
 import sqlalchemy as sa
 
@@ -8,6 +9,8 @@ import sqlalchemy as sa
 FIELD_TYPES = {
     "text": "Free text",
     "date": "Date",
+    "money": "Amount (AUD)",
+    "number": "Decimal number",
     "radio": "Radio buttons",
     "dropdown": "Dropdown",
     "multi": "Multi-select dropdown",
@@ -96,8 +99,36 @@ class Module:
         return self.pattern.replace("{n}", str(row_id - 1))
 
 
+class ExactDecimal(sa.TypeDecorator):
+    """SQLite NUMERIC affinity converts large decimals to lossy floats."""
+
+    impl = sa.Numeric
+    cache_ok = True
+
+    def __init__(self, places):
+        self.places = places
+        super().__init__(precision=18, scale=places)
+
+    def load_dialect_impl(self, dialect):
+        return dialect.type_descriptor(sa.Text() if dialect.name == "sqlite"
+                                       else sa.Numeric(18, self.places))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        value = Decimal(value).quantize(Decimal(10) ** -self.places)
+        return str(value) if dialect.name == "sqlite" else value
+
+    def process_result_value(self, value, dialect):
+        return Decimal(value) if value is not None else None
+
+
 def scalar_type(kind):
-    return sa.Date if kind == "date" else sa.Text
+    if kind == "date":
+        return sa.Date()
+    if kind in {"money", "number"}:
+        return ExactDecimal(2 if kind == "money" else 4)
+    return sa.Text()
 
 
 def load(conn, module_id):
@@ -162,7 +193,7 @@ def add_field(conn, module, form):
         links(field).create(conn)
     else:
         # Identifiers are derived only from database-assigned integer IDs.
-        column_type = scalar_type(kind)().compile(dialect=conn.dialect)
+        column_type = scalar_type(kind).compile(dialect=conn.dialect)
         conn.exec_driver_sql(
             f"ALTER TABLE {module.table.name} ADD COLUMN {key(field)} {column_type}"
         )

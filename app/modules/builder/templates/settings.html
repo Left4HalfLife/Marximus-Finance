@@ -2,6 +2,14 @@
 {% block content %}
 <p class="eyebrow">Settings</p>
 <h1>Module builder</h1>
+<section><h2>Australian finance defaults</h2>
+  <p>Add linked finance modules and the home dashboard. Existing records and view settings are preserved; incompatible fields are reported, not overwritten.</p>
+  <form method="post">
+    <input type="hidden" name="_csrf" value="{{ csrf }}">
+    <input type="hidden" name="action" value="finance">
+    <button>Install finance defaults</button>
+  </form>
+</section>
 <section>
   <h2>Modules</h2>
   {% if nav %}<ul>{% for item in nav %}<li><a href="{{ url_for('.design', module_id=item.id) }}">{{ item.name }}</a> &middot; <code>{{ item.pattern }}</code></li>{% endfor %}</ul>

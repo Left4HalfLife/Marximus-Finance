@@ -15,6 +15,7 @@ def create_app(config=None):
     app.config.from_mapping(
         DATABASE_URL=os.environ.get("DATABASE_URL"),
         SECRET_KEY=os.environ.get("SECRET_KEY") or secrets.token_hex(32),
+        FINANCE_DEFAULTS=True,
     )
     app.config.update(config or {})
     uri = app.config["DATABASE_URL"]
@@ -34,7 +35,13 @@ def create_app(config=None):
         def begin_sqlite(connection):
             connection.exec_driver_sql("BEGIN")
 
+    from .finance import install_defaults
+    from .catalog import modules
+
     metadata.create_all(engine)
+    with engine.begin() as conn:
+        if app.config["FINANCE_DEFAULTS"] and not conn.scalar(sa.select(modules.c.id).limit(1)):
+            install_defaults(conn)
     app.extensions["builder_engine"] = engine
     from .web import web
 

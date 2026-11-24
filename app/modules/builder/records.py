@@ -1,9 +1,24 @@
 from datetime import date
+from decimal import Decimal, InvalidOperation
 from functools import cached_property
 
 import sqlalchemy as sa
 
 from .catalog import CHOICES, LINKED, RELATED, Invalid, key, links, load
+
+
+def decimal_value(field, raw):
+    places = 2 if field.kind == "money" else 4
+    try:
+        value = Decimal(raw)
+        if (not value.is_finite() or value.copy_abs() >= 10 ** (18 - places)
+                or value != value.quantize(Decimal(10) ** -places)):
+            raise InvalidOperation
+        return value
+    except InvalidOperation:
+        raise Invalid(
+            f"{field.label}: enter a finite number with at most {places} decimal places."
+        ) from None
 
 
 def number_expression(module, table):
@@ -71,7 +86,11 @@ class Records:
                         value = date.fromisoformat(value)
                     except ValueError:
                         raise Invalid(f"{field.label}: enter a valid date.") from None
+                if value and field.kind in {"money", "number"}:
+                    value = decimal_value(field, value)
                 scalars[key(field)] = value
+        from .finance import validate_record
+        validate_record(self.conn, self.module, record_id, scalars, selections)
         if record_id is None:
             record_id = self.conn.execute(
                 self.table.insert().values(**scalars)
@@ -94,6 +113,8 @@ class Records:
 
     def predicate(self, field, term, *, exact):
         if field.kind not in LINKED:
+            if exact and field.kind in {"money", "number"}:
+                return self.table.c[key(field)] == decimal_value(field, term)
             column = sa.cast(self.table.c[key(field)], sa.String)
             return column == term if exact else column.icontains(term, autoescape=True)
         link = links(field)
@@ -136,6 +157,8 @@ class Records:
             if f.kind not in LINKED:
                 for row in rows:
                     value = row[k]
+                    if value is not None and f.kind == "money" and not for_edit:
+                        value = f"A${value:,.2f}"
                     result[row.id][k] = [] if value is None else [str(value)]
                 continue
             link = links(f)

@@ -4,6 +4,9 @@
 <p class="eyebrow"><a href="{{ url_for('.listing', module_id=module.id) }}">{{ module.name }}</a> / Record</p>
 <div class="heading"><h1>{{ module.number(row.id) }}</h1><a class="button" href="{{ url_for('.edit', module_id=module.id, record_id=row.id) }}">Edit record</a></div>
 <section><dl>{% for f in visible %}
-  <dt>{{ f.label }}</dt><dd>{{ values.get(key(f), [])|join(', ') or '—' }}</dd>
+  <dt>{{ f.label }}</dt><dd>{% if f.kind in ['related', 'related_many'] %}
+    {% for caption in values.get(key(f), []) %}<a href="{{ url_for('.detail', module_id=f.target, record_id=related_ids[key(f)][loop.index0]|int) }}">{{ caption }}</a>{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}
+  {% else %}{{ values.get(key(f), [])|join(', ') or '—' }}{% endif %}</dd>
 {% else %}<dd>No fields in this detail view.</dd>{% endfor %}</dl></section>
+{% if document_total is not none %}<section><h2>Total including GST</h2><p>{{ document_total|aud }}</p></section>{% endif %}
 {% endblock %}
