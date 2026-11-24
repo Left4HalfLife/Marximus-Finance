@@ -14,6 +14,7 @@ class BuilderTest(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.config = {
             "TESTING": True,
+            "FINANCE_DEFAULTS": False,
             "DATABASE_URL": f"sqlite:///{Path(directory.name) / 'finance.db'}",
         }
         self.start_app()
@@ -137,4 +138,5 @@ class BuilderTest(unittest.TestCase):
         self.assertEqual(self.client.post(design, data={"action": "layout"}).status_code, 400)
         self.assertEqual(set(sa.inspect(self.engine).get_table_names()), {
             "builder_modules", "builder_fields", "builder_records_1", "builder_links_1",
+            "finance_defaults",
         })

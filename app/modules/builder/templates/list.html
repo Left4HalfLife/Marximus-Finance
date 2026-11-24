@@ -9,8 +9,8 @@
     {% for f in module.fields if f.filterable %}
       {% set k = key(f) %}
       <label>{{ f.label }}
-        {% if f.kind in ['text', 'date'] %}
-          <input type="{{ 'date' if f.kind == 'date' else 'text' }}" name="{{ k }}" value="{{ request.args.get(k, '') }}">
+        {% if f.kind in ['text', 'date', 'money', 'number'] %}
+          <input type="{{ 'number' if f.kind in ['money', 'number'] else f.kind }}" {% if f.kind in ['money', 'number'] %}step="{{ '0.01' if f.kind == 'money' else '0.0001' }}"{% endif %} name="{{ k }}" value="{{ request.args.get(k, '') }}">
         {% else %}
           <select name="{{ k }}"><option value="">All</option>{% for value, name in options(f) %}<option value="{{ value }}"{% if request.args.get(k) == value %} selected{% endif %}>{{ name }}</option>{% endfor %}</select>
         {% endif %}

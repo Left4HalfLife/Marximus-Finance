@@ -9,6 +9,7 @@
 <body>
   <header><nav aria-label="Main navigation">
     <a class="brand" href="{{ url_for('.home') }}">Marximus Finance</a>
+    <a href="{{ url_for('.home') }}"{% if request.endpoint == 'builder.home' %} aria-current="page"{% endif %}>Home</a>
     {% for item in nav %}
       <a href="{{ url_for('.listing', module_id=item.id) }}"{% if module and module.id == item.id and request.endpoint not in ['builder.settings','builder.design'] %} aria-current="page"{% endif %}>{{ item.name }}</a>
     {% endfor %}

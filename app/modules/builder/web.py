@@ -8,6 +8,7 @@ from flask import (
 from . import catalog
 from .catalog import FIELD_TYPES, VIEWS, Invalid, key, modules
 from .records import Records
+from .finance import dashboard, install_defaults, document_total
 
 
 web = Blueprint("builder", __name__)
@@ -47,6 +48,9 @@ def module_or_404(module_id):
 
 @web.get("/")
 def home():
+    report = dashboard(g.conn)
+    if report is not None:
+        return render_template("dashboard.html", report=report)
     first = g.conn.scalar(sa.select(modules.c.id).order_by(modules.c.name).limit(1))
     if first is None:
         return redirect(url_for(".settings"))
@@ -57,14 +61,24 @@ def home():
 def settings():
     if request.method == "POST":
         try:
+            if request.form.get("action") == "finance":
+                install_defaults(g.conn)
+                g.conn.commit()
+                return redirect(url_for(".home"))
             module_id = catalog.create_module(
                 g.conn, request.form.get("name", ""), request.form.get("pattern", "")
             )
         except Invalid as exc:
+            g.conn.rollback()
             return render_template("settings.html", error=str(exc)), 400
         g.conn.commit()
         return redirect(url_for(".design", module_id=module_id))
     return render_template("settings.html")
+
+
+@web.app_template_filter("aud")
+def aud(value):
+    return f"A${value:,.2f}" if value is not None else "Not set"
 
 
 @web.route("/settings/<int:module_id>", methods=["GET", "POST"])
@@ -113,6 +127,8 @@ def detail(module_id, record_id):
     return render_template(
         "detail.html", module=module, row=row, visible=visible,
         values=records.values([row], visible)[record_id],
+        related_ids=records.values([row], visible, for_edit=True)[record_id],
+        document_total=document_total(g.conn, module, row),
     )
 
 

@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<p class="eyebrow">NSW, Australia · AUD · {{ report.today }} (Sydney)</p>
+<h1>Finance dashboard</h1>
+<p>Month to date: {{ report.month }} to {{ report.today }}. Record actual receipts and payments in Transactions; invoices and purchase orders do not move cash automatically.</p>
+{% if report.incomplete %}<p role="alert">{{ report.incomplete }} incomplete transaction(s) excluded. Complete their date, direction, positive amount, category, deductible status and bank account.</p>{% endif %}
+<div class="metrics">
+  <section><h2>Income</h2><strong>{{ report.income|aud }}</strong></section>
+  <section><h2>Expenses</h2><strong>{{ report.expenses|aud }}</strong></section>
+  <section><h2>Net savings / cash flow</h2><strong>{{ report.savings|aud }}</strong>
+    <p class="hint">Income minus expenses, excluding transfers. {% if report.savings_rate is not none %}Savings rate: {{ '%.1f'|format(report.savings_rate) }}%.{% endif %}</p>
+  </section>
+  <section><h2>Cash on hand</h2><strong>{{ report.cash|aud }}</strong><p class="hint">Total tracked bank balances as of today.</p></section>
+</div>
+<section><div class="heading"><h2>Bank accounts</h2><a href="{{ url_for('.edit', module_id=report.modules.accounts.id) }}">Add account</a></div>
+  <p class="hint">Opening balance is immediately before transactions on the opening date. Earlier history is excluded from balances. Future transactions are excluded. Record transfers as two linked-account entries (Transfer out and Transfer in).</p>
+  <div class="scroll"><table><thead><tr><th>Account</th><th>Opening date</th><th>Opening balance</th><th>Current balance</th></tr></thead><tbody>
+  {% for a in report.accounts %}<tr><td><a href="{{ url_for('.detail', module_id=report.modules.accounts.id, record_id=a.id) }}">{{ a.Name }}</a>
+    <p><a href="{{ url_for('.listing', module_id=report.modules.transactions.id) }}?{{ report.account_filter }}={{ a.id }}">Transactions</a></p></td><td>{{ a['Opening date'] or 'Not set' }}</td><td>{{ a['Opening balance']|aud }}</td><td>{{ a.balance|aud }}{% if a.balance is none %} (missing opening values or future opening date){% endif %}</td></tr>
+  {% else %}<tr><td colspan="4">Add a bank account with an opening date and balance, then link transactions to it.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+<section><div class="heading"><h2>Monthly expenses by category</h2><a href="{{ url_for('.edit', module_id=report.modules.transactions.id) }}">Add transaction</a></div>
+  <dl>{% for category, amount in report.categories %}<dt>{{ category }}</dt><dd>{{ amount|aud }}</dd>{% else %}<dd>No expenses recorded this month.</dd>{% endfor %}</dl>
+</section>
+<section><div class="heading"><h2>Investment properties</h2><a href="{{ url_for('.listing', module_id=report.modules.properties.id) }}">Manage properties</a></div>
+  <p class="hint">Australian financial year to date: {{ report.financial_year }} to {{ report.today }}. Estimated gearing uses linked income minus expenses marked Tax deductible = Yes. Cash flow includes all linked expenses, including loan principal. Review amounts are not treated as deductible.</p>
+  <div class="scroll"><table><thead><tr><th>Property / tenants</th><th>Income</th><th>Expenses</th><th>Cash flow</th><th>Deductible expenses</th><th>Needs review</th><th>Estimated rental result / gearing</th></tr></thead><tbody>
+  {% for p in report.properties %}<tr>
+    <td><a href="{{ url_for('.detail', module_id=report.modules.properties.id, record_id=p.id) }}">{{ p.Address or report.modules.properties.number(p.id) }}</a>
+      <p><a href="{{ url_for('.listing', module_id=report.modules.transactions.id) }}?{{ report.property_filter }}={{ p.id }}">Transactions</a></p>
+      {% for tenant in p.Tenants %}<p><a href="{{ url_for('.detail', module_id=report.modules.users.id, record_id=tenant|int) }}">{{ p.tenants[loop.index0] }}</a></p>{% endfor %}</td>
+    <td>{{ p.income|aud }}</td><td>{{ p.expenses|aud }}</td><td>{{ p.cash_flow|aud }}</td>
+    <td>{{ p.deductible|aud }}</td><td>{{ p.review|aud }}</td><td>{{ p.result|aud }} / {{ p.gearing }}</td>
+  </tr>{% else %}<tr><td colspan="7">Add an investment property, link its tenants and tag its income and expense transactions.</td></tr>{% endfor %}
+  </tbody></table></div>
+  <p class="hint">Tracking estimates only, not tax advice or an ATO return. Deductibility depends on use and circumstances; capital costs, depreciation, mixed use and ownership apportionment are not calculated. Confirm NSW land tax and Australian tax treatment with a qualified adviser.</p>
+</section>
+<section><div class="heading"><h2>Stock holdings</h2><a href="{{ url_for('.listing', module_id=report.modules.stocks.id) }}">Manage stocks</a></div>
+  <p class="hint">Manual AUD valuations, not live prices. Convert foreign holdings to AUD before entry. Unrealised gains exclude fees, dividends and tax.</p>
+  <div class="scroll"><table><thead><tr><th>Holding</th><th>Units</th><th>Price date</th><th>Value</th><th>Unrealised gain / loss</th></tr></thead><tbody>
+  {% for s in report.stocks %}<tr><td><a href="{{ url_for('.detail', module_id=report.modules.stocks.id, record_id=s.id) }}">{{ s.Name or s.Ticker }}</a></td><td>{{ s.Units if s.Units is not none else 'Not set' }}</td><td>{{ s['Price date'] or 'Not set' }}</td><td>{{ s.value|aud }}</td><td>{{ s.gain|aud }}</td></tr>
+  {% else %}<tr><td colspan="5">No stock holdings yet.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+<section><h2>Sole trader workspace</h2>
+  <p><a href="{{ url_for('.listing', module_id=report.modules.users.id) }}">Customers and tenants</a> ·
+    <a href="{{ url_for('.listing', module_id=report.modules.contracts.id) }}">Contracts</a> ·
+    <a href="{{ url_for('.listing', module_id=report.modules.invoices.id) }}">Invoices</a> ·
+    <a href="{{ url_for('.listing', module_id=report.modules.orders.id) }}">Purchase orders</a></p>
+  <p class="hint">Link customers, contracts and invoices, then link payments in Transactions. Invoice and order totals are amount excluding GST plus GST amount; enter GST explicitly only where applicable. Statuses are maintained manually. This is a tracking register, not a compliant tax-invoice generator or BAS calculator.</p>
+</section>
+{% endblock %}

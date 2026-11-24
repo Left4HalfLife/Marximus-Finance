@@ -31,3 +31,5 @@ th, td { padding: .55rem; text-align: left; border-bottom: 1px solid #d5dfe2; }
 dd { margin: .1rem 0 .8rem; }
 fieldset { margin: .75rem 0; border: 1px solid #d5dfe2; }
 [role=alert] { background: #ffebe8; color: #8e2417; padding: .7rem; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; }
+.metrics strong { font-size: 1.6rem; }
